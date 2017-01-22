@@ -42,7 +42,7 @@ task userSharedZip(type: Zip) {
     
     // Copy include files from cpp project
     from(file(cppInclude)) {
-        include '**/*.h'
+        include '**/*.hpp'
         into '/cpp/include'
     }
 
@@ -186,7 +186,7 @@ task userStaticZip(type: Zip) {
     
     // Copy include files from cpp project
     from(file(cppInclude)) {
-        include '**/*.h'
+        include '**/*.hpp'
         into '/cpp/include'
     }
 
