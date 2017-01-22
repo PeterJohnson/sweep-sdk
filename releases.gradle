@@ -65,7 +65,7 @@ task userSharedZip(type: Zip) {
 
     // copy driver include
     from (file(driverInclude)) {
-        include '**/*.h'
+        include 'sweep.h'
         into '/cpp/include'
     }
     
@@ -204,7 +204,7 @@ task userStaticZip(type: Zip) {
 
     // copy driver include
     from (file(driverInclude)) {
-        include '**/*.h'
+        include 'sweep.h'
         into '/cpp/include'
     }
     
