@@ -1,0 +1,55 @@
+defineWpiUtilProperties()
+defineHALProperties()
+
+def driverSetupModel = { project ->
+    project.model {
+        components {
+            sweepDriver(NativeLibrarySpec) {
+                targetPlatform 'arm'
+                setupDefines(project, binaries)
+
+                binaries.all {
+                    tasks.withType(CppCompile) {
+                        cppCompiler.args "-DNAMESPACED_WPILIB"
+                        addUserLinks(linker, targetPlatform, false)
+                        addWpiUtilLibraryLinks(it, linker, targetPlatform)
+                        addHalLibraryLinks(it, linker, targetPlatform)
+                    }
+                }
+
+                project.setupJniIncludes(binaries)
+                project.checkNativeSymbols(project.getNativeJNISymbols)
+
+                sources {
+                    cpp {
+                        source {
+                            srcDirs = [driverSrc, javaJNISrc, driverLibrarySrc]
+                            includes = ["**/*.cpp", "*.c"]
+                            excludes = ['dummy.c']
+                        }
+                        exportedHeaders {
+                            srcDirs = [driverInclude, driverLibraryInclude, halInclude, wpiUtilInclude]
+                            project.jniHeaders.outputs.files.each { file ->
+                                srcDirs file.getPath()
+                            }
+                            includes = ['**/*.h']
+                            excludes = ['protocol.h', 'serial.h', 'sweep_time.h']
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+project(':arm:driver') {
+    apply plugin: 'cpp'
+
+    apply from: "${rootDir}/toolchains/arm.gradle"
+
+    apply from: "${rootDir}/java/java.gradle"
+
+    driverSetupModel(project)
+    
+    project.debugStripSetup()
+}
