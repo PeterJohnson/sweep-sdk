@@ -8,3 +8,8 @@ release/*
 *.project
 .settings/org.eclipse.buildship.core.prefs
 .vscode/
+
+temp/
+setup/ 
+
+!buildInstaller.ps1
