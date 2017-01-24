@@ -1,0 +1,21 @@
+version: '{branch}-{build}'
+pull_requests:
+  do_not_increment_build_number: true
+skip_branch_with_pr: true
+build_script:
+- ps: >-
+    ./buildInstaller.ps1
+
+    if($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode )  }
+
+    Get-ChildItem .\setup\Output\*.exe | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
+
+    Get-ChildItem .\setup\Output\*.zip | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
+
+deploy:
+- provider: GitHub
+  auth_token:
+    secure: iRYg7BaJ7cJ9OB18xvaOhmmhSZjN48FU2/2tB6K3qyqY2ubxOJTF2yYowAzksBYo
+  artifact: /.*\.exe/,/.*\.zip/
+  on:
+    appveyor_repo_tag: true

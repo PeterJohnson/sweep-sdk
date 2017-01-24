@@ -14,12 +14,11 @@ def cppSetupModel = { project ->
                 binaries.all {
                     tasks.withType(CppCompile) {
                         cppCompiler.args "-DNAMESPACED_WPILIB"
-                        addUserLinks(linker, targetPlatform, false)
                         addHalLibraryLinks(it, linker, targetPlatform)
                         addWpiUtilLibraryLinks(it, linker, targetPlatform)
                         addNetworkTablesLibraryLinks(it, linker, targetPlatform)
                         addWpilibLibraryLinks(it, linker, targetPlatform)
-						addCsCoreLibraryLinks(it, linker, targetPlatform)
+                        addCsCoreLibraryLinks(it, linker, targetPlatform)
                     }
                 }
 
@@ -72,11 +71,13 @@ ext.mergeStaticSetup = { pjt ->
                     mriFile << "end\n"
                     
                     def stdIn = new ByteArrayInputStream(mriFile.buf)
+
+                    def tool = project(':arm:driver').binTools('ar')
                     
                     exec {
                         standardInput = stdIn
                         workingDir = libraryPath
-                        commandLine "${compilerPrefixToUse}ar", '-M'
+                        commandLine tool, '-M'
                     }
                 }
             }
