@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-#include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <mutex>
 #include <utility>
@@ -15,9 +15,10 @@
 #include <SFML/Window.hpp>
 
 // Zoom into 5x5 meter area
-const constexpr auto kMaxLaserDistance = 5 * 100;
+const constexpr auto kMaxLaserDistance = 5 * 100.;
 
 // Use cream for the background and denim for points
+static const sf::Color kColorCenter{255, 0, 0};
 static const sf::Color kColorCream{250, 240, 230};
 static const sf::Color kColorDenim{80, 102, 127};
 
@@ -25,8 +26,16 @@ static const sf::Color kColorDenim{80, 102, 127};
 using PointCloud = std::vector<sf::CircleShape>;
 using PointCloudMutex = std::mutex;
 
-int main() try {
-  sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Example Viewer for Scanse Sweep LiDAR");
+int main(int argc, char* argv[]) try {
+  if (argc != 2) {
+    std::cout << "Usage: ./example-viewer /dev/ttyUSB0\n";
+    return EXIT_FAILURE;
+  }
+
+  sf::ContextSettings settings;
+  settings.antialiasingLevel = 8;
+  sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Example Viewer for Scanse Sweep LiDAR", sf::Style::Default, settings);
+
   window.setFramerateLimit(30);
   window.setActive(false); // activated on render thread
 
@@ -41,6 +50,9 @@ int main() try {
       while (window->pollEvent(event)) {
         if (event.type == sf::Event::Closed)
           window->close();
+        else if (event.type == sf::Event::KeyPressed)
+          if (event.key.code == sf::Keyboard::Escape)
+            window->close();
       }
 
       window->clear(kColorCream);
@@ -60,7 +72,8 @@ int main() try {
   thread.launch();
 
   // Now start scanning in the second thread, swapping in new points for every scan
-  sweep::sweep device;
+  sweep::sweep device{argv[1]};
+  // Begins data acquisition as soon as motor is ready
   device.start_scanning();
 
   sweep::scan scan;
@@ -77,8 +90,11 @@ int main() try {
     for (auto sample : scan.samples) {
       const constexpr auto kDegreeToRadian = 0.017453292519943295;
 
-      // Cap distance for zooming in
-      const auto distance = static_cast<double>(std::min(sample.distance, kMaxLaserDistance));
+      const auto distance = static_cast<double>(sample.distance);
+
+      // Discard samples above our we zoomed-in view box
+      if (distance > kMaxLaserDistance)
+        continue;
 
       // From milli degree to degree and adjust to device orientation
       const auto degree = std::fmod((static_cast<double>(sample.angle) / 1000. + 90.), 360.);
@@ -96,16 +112,22 @@ int main() try {
       x = (x / (2 * kMaxLaserDistance)) * windowMinSize;
       y = (y / (2 * kMaxLaserDistance)) * windowMinSize;
 
-      sf::CircleShape point{2.0f, 4};
+      sf::CircleShape point{3.0f, 8};
       point.setPosition(x, windowMinSize - y);
 
       // Base transparency on signal strength
       auto color = kColorDenim;
-      color.a = (sample.signal_strength / 100.0f) * 255.0f;
+      color.a = sample.signal_strength;
       point.setFillColor(color);
 
       localPointCloud.push_back(std::move(point));
     }
+
+    // display LiDAR position
+    sf::CircleShape point{3.0f, 8};
+    point.setPosition(windowMinSize / 2, windowMinSize / 2);
+    point.setFillColor(kColorCenter);
+    localPointCloud.push_back(std::move(point));
 
     {
       // Now swap in the new point cloud
@@ -113,6 +135,9 @@ int main() try {
       pointCloud = std::move(localPointCloud);
     }
   }
+
+  device.stop_scanning();
+
 } catch (const sweep::device_error& e) {
   std::cerr << "Error: " << e.what() << std::endl;
 }

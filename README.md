@@ -1,12 +1,14 @@
 # Sweep SDK
 
 [![Continuous Integration](https://travis-ci.org/scanse/sweep-sdk.svg?branch=master)](https://travis-ci.org/scanse/sweep-sdk)
+[![Continuous Integration](https://ci.appveyor.com/api/projects/status/github/scanse/sweep-sdk?svg=true)](https://ci.appveyor.com/project/kent-williams/sweep-sdk)
 
 SDK for Scanse Sweep LiDAR.
 
 - [libsweep](libsweep/README.md): low-level ABI/API-stable C library
 - [SweepPy](sweeppy/README.md): Python bindings
 - [SweepJs](sweepjs/README.md): NodeJS bindings
+- [JSweep](jsweep/): Java bindings
 
 Real-time viewer for a device speed of 5 Hz:
 

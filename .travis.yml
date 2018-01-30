@@ -2,6 +2,8 @@ language: generic
 sudo: required
 dist: trusty
 
+services:
+    - docker
 
 matrix:
   fast_finish: true
@@ -10,54 +12,93 @@ matrix:
     - os: linux
       addons:
         apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-6', 'cmake', 'python3', 'nodejs', 'npm']
+          sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:webupd8team/java'
+          packages: ['g++-6', 'cmake', 'python3', 'python3-pip', 'python3-setuptools', 'nodejs', 'npm', 'libsfml-dev', 'libprotobuf-dev', 'protobuf-compiler', 'libzmq-dev']
       env: CCOMPILER='gcc-6' CXXCOMPILER='g++-6'
 
     - os: linux
       addons:
         apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-5', 'cmake', 'python3', 'nodejs', 'npm']
+          sources:
+              - ubuntu-toolchain-r-test
+              - sourceline: 'ppa:webupd8team/java'
+          packages: ['g++-5', 'cmake', 'python3', 'python3-pip', 'python3-setuptools', 'nodejs', 'npm', 'libsfml-dev', 'libprotobuf-dev', 'protobuf-compiler', 'libzmq-dev']
       env: CCOMPILER='gcc-5' CXXCOMPILER='g++-5'
 
     - os: linux
       addons:
         apt:
-          sources: ['llvm-toolchain-precise-3.8']
-          packages: ['clang-3.8', 'cmake', 'python3', 'nodejs', 'npm']
-      env: CCOMPILER='clang-3.8' CXXCOMPILER='clang++-3.8'
+          sources:
+              - llvm-toolchain-trusty-3.9
+              - sourceline: 'ppa:webupd8team/java'
+          packages: ['clang-3.9', 'cmake', 'python3', 'python3-pip', 'python3-setuptools', 'nodejs', 'npm', 'libsfml-dev', 'libprotobuf-dev', 'protobuf-compiler', 'libzmq-dev']
+      env: CCOMPILER='clang-3.9' CXXCOMPILER='clang++-3.9'
 
-    # Waiting on Travis whitelisting 3.9, see https://github.com/travis-ci/apt-source-whitelist/issues/300
-    #- os: linux
-    #  addons:
-    #    apt:
-    #      sources: ['llvm-toolchain-precise-3.9']
-    #      packages: ['clang-3.9']
-    #  env: CCOMPILER='clang-3.9' CXXCOMPILER='clang++-3.9'
+    - os: linux
+      addons:
+        apt:
+          sources:
+              - llvm-toolchain-trusty-4.0
+              - sourceline: 'ppa:webupd8team/java'
+          packages: ['clang-4.0', 'cmake', 'python3', 'python3-pip', 'python3-setuptools', 'nodejs', 'npm', 'libsfml-dev', 'libprotobuf-dev', 'protobuf-compiler', 'libzmq-dev']
+      env: CCOMPILER='clang-4.0' CXXCOMPILER='clang++-4.0'
 
+    - os: osx
+      osx_image: xcode8.2
+      node_js: 4
+      env: CCOMPILER='clang' CXXCOMPILER='clang++'
+
+    - os: osx
+      osx_image: xcode8.2
+      node_js: 6
+      env: CCOMPILER='clang' CXXCOMPILER='clang++'
 
 before_install:
   - export CC=${CCOMPILER} CXX=${CXXCOMPILER}
-  - sudo update-alternatives --install /usr/bin/node node /usr/bin/nodejs 10
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo update-alternatives --install /usr/bin/node node /usr/bin/nodejs 10; fi
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew update && brew install python3 && brew cask install java; fi
 
 install:
-  # Make sure building and installing libsweep works
+  # Make sure building libsweep works
   - pushd libsweep
-  - make
-  - sudo make install
-  - make clean
+  - mkdir -p build
+  - cd build
+  - cmake .. -DCMAKE_BUILD_TYPE=Debug
+  - cmake --build .
   # Then build and install dummy library to test bindings against without device attached
-  - make dummy
-  - sudo make install
+  - cmake .. -DCMAKE_BUILD_TYPE=Debug -DDUMMY=On
+  - cmake --build .
+  - sudo cmake --build . --target install
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
   - popd
+  # Install Python bindings
+  - pushd sweeppy
+  - sudo python2 setup.py install
+  - sudo python3 setup.py install
+  - popd
+  # Build Java Bindings
+  - ./travis/java-run-task.sh assemble
 
 script:
+  # Test libsweep examples against the dummy library
+  - pushd libsweep/examples
+  - mkdir build
+  - cd build
+  - cmake ..
+  - cmake --build .
+  - ./example-c /dev/ttyUSB0
+  - ./example-c++ /dev/ttyUSB0
+  - popd
   # Test SweepPy bindings against the dummy library
   - pushd sweeppy
-  - python3 sweeppy.py
+  - python2 -m sweeppy /dev/ttyUSB0
+  - python3 -m sweeppy /dev/ttyUSB0
   - popd
   # Test SweepJs bindings against the dummy library
   - pushd sweepjs
   - npm install
   - popd
+  # Test JSweep bindings against the dummy library
+  - ./travis/java-run-task.sh check

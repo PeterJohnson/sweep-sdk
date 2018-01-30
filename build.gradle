@@ -116,14 +116,13 @@ model {
             sources {
                 cpp {
                     source {
-                        srcDirs = ['src/driver/native/cpp', 'libsweep']
-                        include '**/*.cpp'
-                        excludes =  ['dummy.cpp']
+                        srcDirs = ['src/driver/native/cpp', 'libsweep/src']
+                        include '**/*.cc'
+                        excludes =  ['dummy.cc']
                     }
                     exportedHeaders {
-                        srcDirs = ['libsweep']
+                        srcDirs = ['libsweep/include/sweep', 'libsweep/include']
                         include '**/*.h'
-                        excludes = ['protocol.h', 'serial.h', 'sweep_time.h']
                     }
                 }
             }

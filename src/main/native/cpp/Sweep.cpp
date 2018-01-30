@@ -4,7 +4,7 @@ namespace sweep {
 
 Sweep::Sweep() {
   sweep_error_s error = nullptr;
-  m_device = sweep_device_construct_simple(&error);
+  m_device = sweep_device_construct_simple("/dev/ttyUSB0", &error);
   if (error) {
     wpi_setErrorWithContext(-100, sweep_error_message(error));
     sweep_error_destruct(error);
