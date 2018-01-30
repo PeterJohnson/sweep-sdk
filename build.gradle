@@ -1,64 +1,151 @@
+import edu.wpi.first.nativeutils.NativeUtils
+import org.gradle.api.file.FileCollection
 import org.gradle.internal.os.OperatingSystem
+import edu.wpi.first.nativeutils.tasks.JNIHeaders
 
-plugins {
-    id 'net.ltgt.errorprone' version '0.0.8'
-    id 'edu.wpi.first.wpilib.versioning.WPILibVersioningPlugin' version '1.6'
-}
-
-allprojects {
+buildscript {
     repositories {
-        mavenCentral()
+        mavenLocal()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath 'gradle.plugin.edu.wpi.first:native-utils:1.5.2'
+        classpath 'gradle.plugin.edu.wpi.first.wpilib.versioning:wpilib-version-plugin:2.0'
     }
 }
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'edu.wpi.first.wpilib.versioning.WPILibVersioningPlugin'
 
 if (!hasProperty('releaseType')) {
     WPILibVersion {
-        releaseType = 'official'
+        releaseType = 'dev'
     }
 }
 
-ext.useDriver = true
+ext.getClassifier = { binary->
+    return NativeUtils.getClassifier(binary)
+}
 
-ext.setupDefines = { project, binaries ->
-    binaries.all {
-        if (project.hasProperty('debug')) {
-            project.setupDebugDefines(cppCompiler, linker)
-        } else {
-            project.setupReleaseDefines(cppCompiler, linker)
+ext.getPlatformPath = { binary->
+    return NativeUtils.getPlatformPath(binary)
+}
+
+ext.getJNIHeadersClass = {
+    return JNIHeaders
+}
+
+apply plugin: 'cpp'
+apply plugin: 'visual-studio'
+apply plugin: 'edu.wpi.first.NativeUtils'
+apply plugin: 'java'
+
+apply from: 'config.gradle'
+
+test.enabled = false
+
+dependencies {
+    compile 'edu.wpi.first.wpiutil:wpiutil-java:3.+'
+    compile 'edu.wpi.first.ntcore:ntcore-java:4.+'
+    compile 'org.opencv:opencv-java:3.2.0'
+    compile 'edu.wpi.first.cscore:cscore-java:1.+'
+    compile 'edu.wpi.first.wpilibj:wpilibj-java:2018.+'
+}
+
+jar {
+    baseName = 'sweep'
+}
+
+model {
+    jniConfigs {
+        sweepDriver(JNIConfig) {
+            jniDefinitionClasses = [ "com.armabot.SweepJNI"]
+            jniArmHeaderLocations = [ all: file("${rootDir}/src/arm-linux-jni") ]
+            sourceSets = [ project.sourceSets.main ]
+        }
+    }
+    dependencyConfigs {
+        wpiutil(DependencyConfig) {
+            groupId = 'edu.wpi.first.wpiutil'
+            artifactId = 'wpiutil-cpp'
+            headerClassifier = 'headers'
+            ext = 'zip'
+            version = '3.+'
+            sharedConfigs = [ sweepDriver: [], sweep: []]
+        }
+        nilibraries(DependencyConfig) {
+            groupId = 'edu.wpi.first.ni-libraries'
+            artifactId = 'ni-libraries'
+            headerClassifier = 'headers'
+            ext = 'zip'
+            version = '+'
+            sharedConfigs = [ sweepDriver: [], sweep: [] ]
+        }
+        hal(DependencyConfig) {
+            groupId = 'edu.wpi.first.hal'
+            artifactId = 'hal'
+            headerClassifier = 'headers'
+            ext = 'zip'
+            version = '+'
+            sharedConfigs = [ sweepDriver: [], sweep: [] ]
+        }
+        ntcore(DependencyConfig) {
+            groupId = 'edu.wpi.first.ntcore'
+            artifactId = 'ntcore-cpp'
+            headerClassifier = 'headers'
+            ext = 'zip'
+            version = '4.+'
+            sharedConfigs = [ sweep: [] ]
+        }
+        wpilibc(DependencyConfig) {
+            groupId = 'edu.wpi.first.wpilibc'
+            artifactId = 'wpilibc'
+            headerClassifier = 'headers'
+            ext = 'zip'
+            version = '+'
+            sharedConfigs = [ sweep: [], ]
+        }
+    }
+    components {
+        sweepDriver(NativeLibrarySpec) {
+            sources {
+                cpp {
+                    source {
+                        srcDirs = ['src/driver/native/cpp', 'libsweep']
+                        include '**/*.cpp'
+                        excludes =  ['dummy.cpp']
+                    }
+                    exportedHeaders {
+                        srcDirs = ['libsweep']
+                        include '**/*.h'
+                        excludes = ['protocol.h', 'serial.h', 'sweep_time.h']
+                    }
+                }
+            }
+        }
+        sweep(NativeLibrarySpec) {
+            sources {
+                cpp {
+                    lib library: "sweepDriver", linkage: 'shared'
+                    source {
+                        srcDirs = ['src/main/native/cpp']
+                        include '**/*.cpp'
+                    }
+                    exportedHeaders {
+                        srcDirs 'src/main/native/include'
+                    }
+                }
+
+            }
         }
     }
 }
 
-apply from: "locations.gradle"
-
-apply from: "properties.gradle"
-
-apply from: "dependencies.gradle"
-
-if (useDriver) {
-    apply from: "driver.gradle"
-}
-apply from: "cpp.gradle"
-
-// Empty task for build so that zips will be
-// built when running ./gradlew build
-task build
-
-apply from: "releases.gradle"
-
-apply from: "installer.gradle"
-
-task clean(type: Delete) {
-    description = "Deletes the build directory"
-    group = "Build"
-    delete buildDir
-}
-
-clean {
-    delete releaseDir
-    delete setupDir
-}
-
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.3'
+    gradleVersion = '4.1'
 }

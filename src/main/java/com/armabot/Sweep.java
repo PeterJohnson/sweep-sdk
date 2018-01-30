@@ -1,6 +1,7 @@
 package com.armabot;
 
 import edu.wpi.first.wpilibj.SensorBase;
+import edu.wpi.first.wpilibj.smartdashboard.SendableBuilder;
 
 public class Sweep extends SensorBase {
   public Sweep() {
@@ -46,6 +47,11 @@ public class Sweep extends SensorBase {
 
   void reset() {
     SweepJNI.reset(m_device);
+  }
+
+  @Override
+  public void initSendable(SendableBuilder builder) {
+
   }
 
   private long m_device;
