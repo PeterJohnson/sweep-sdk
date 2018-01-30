@@ -42,6 +42,8 @@ class Sweep : public frc::SensorBase {
 
   void Reset();
 
+  void InitSendable(SendableBuilder& builder) override;
+
  private:
   sweep_device* m_device;
 };

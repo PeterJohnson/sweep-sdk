@@ -105,4 +105,6 @@ void Sweep::Reset() {
   }
 }
 
+void Sweep::InitSendable(SendableBuilder& builder) {}
+
 }
