@@ -117,7 +117,7 @@ model {
                 cpp {
                     source {
                         srcDirs = ['src/driver/native/cpp', 'libsweep/src']
-                        include '**/*.cc'
+                        include '**/*.cc', '**/*.cpp'
                         excludes =  ['dummy.cc']
                     }
                     exportedHeaders {

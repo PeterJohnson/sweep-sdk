@@ -40,7 +40,7 @@ JNIEXPORT jlong JNICALL Java_com_armabot_SweepJNI_constructSimple
   (JNIEnv *env, jclass)
 {
   sweep_error_s error = nullptr;
-  sweep_device_s rv = sweep_device_construct_simple(&error);
+  sweep_device_s rv = sweep_device_construct_simple("/dev/ttyUSB0", &error);
   if (!CheckStatus(env, error)) return 0;
   return reinterpret_cast<jlong>(rv);
 }
